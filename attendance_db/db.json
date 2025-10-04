@@ -8,5 +8,10 @@
   ],
   "attendance": [
     { "id": 1, "studentId": 1, "timestamp": "2025-10-04T08:00:00.000Z" }
+  ],
+  "history": [
+    { "id": 100, "studentId": 1, "timestamp": "2025-10-03T08:05:00.000Z" },
+    { "id": 101, "studentId": 2, "timestamp": "2025-10-03T08:10:00.000Z" },
+    { "id": 102, "studentId": 3, "timestamp": "2025-10-03T08:12:00.000Z" }
   ]
 }

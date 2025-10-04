@@ -8,6 +8,7 @@ import '../models/attendance.dart';
 class RuntimeStore {
   static final List<Student> _students = <Student>[];
   static final List<AttendanceRecord> _attendance = <AttendanceRecord>[];
+  static final List<AttendanceRecord> _history = <AttendanceRecord>[];
   static final ValueNotifier<int> version = ValueNotifier<int>(0);
 
   static void _bump() {
@@ -26,6 +27,7 @@ class RuntimeStore {
 
   // Attendance
   static List<AttendanceRecord> getAttendance() => List.unmodifiable(_attendance);
+  static List<AttendanceRecord> getHistory() => List.unmodifiable(_history);
 
   static int _nextAttendanceId() {
     if (_attendance.isEmpty) return 100000; // temp ids
@@ -39,18 +41,21 @@ class RuntimeStore {
       timestamp: DateTime.now(),
     );
     _attendance.add(rec);
+    _history.add(rec);
     _bump();
     return rec;
   }
 
   static void addAttendance(AttendanceRecord r) {
     _attendance.add(r);
+    _history.add(r);
     _bump();
   }
 
   static void clear() {
     _students.clear();
     _attendance.clear();
+    _history.clear();
     _bump();
   }
 }

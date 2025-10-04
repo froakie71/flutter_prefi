@@ -21,6 +21,7 @@ class _DashboardPageState extends State<DashboardPage> {
   bool _loading = false;
   List<Student> _students = [];
   List<AttendanceRecord> _attendance = [];
+  List<AttendanceRecord> _history = [];
 
   @override
   void initState() {
@@ -40,11 +41,13 @@ class _DashboardPageState extends State<DashboardPage> {
     final results = await Future.wait([
       ApiService.fetchStudents(),
       ApiService.fetchAttendance(),
+      ApiService.fetchHistory(),
     ]);
     if (!mounted) return;
     setState(() {
       _students = results[0] as List<Student>;
       _attendance = (results[1] as List<AttendanceRecord>)..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      _history = (results[2] as List<AttendanceRecord>)..sort((a, b) => b.timestamp.compareTo(a.timestamp));
       _loading = false;
     });
   }

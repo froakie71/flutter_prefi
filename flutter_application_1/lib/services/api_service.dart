@@ -16,6 +16,8 @@ class ApiService {
 
   static Uri _attendanceUri([String pathSuffix = '']) =>
       Uri.parse('${AppConfig.baseUrl}${AppConfig.attendancePath}$pathSuffix');
+  static Uri _historyUri([String pathSuffix = '']) =>
+      Uri.parse('${AppConfig.baseUrl}${AppConfig.historyPath}$pathSuffix');
 
   // STUDENTS
   static Future<List<Student>> fetchStudents() async {
@@ -108,5 +110,33 @@ class ApiService {
       }
     } catch (_) {}
     return local;
+  }
+
+  // HISTORY
+  static Future<List<AttendanceRecord>> fetchHistory() async {
+    List<AttendanceRecord> remote = const <AttendanceRecord>[];
+    try {
+      final res = await _client.get(_historyUri());
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        final body = jsonDecode(res.body);
+        if (body is List) {
+          remote = body
+              .map((e) => AttendanceRecord.fromJson(e as Map<String, dynamic>))
+              .toList();
+        }
+      }
+    } catch (_) {}
+
+    final list = [
+      ...remote,
+      ...RuntimeStore.getHistory(),
+    ];
+    final seen = <int>{};
+    final merged = <AttendanceRecord>[];
+    for (final r in list) {
+      if (seen.add(r.id)) merged.add(r);
+    }
+    merged.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    return merged;
   }
 }

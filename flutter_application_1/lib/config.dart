@@ -14,4 +14,5 @@ class AppConfig {
   // }
   static const String studentsPath = '/students';
   static const String attendancePath = '/attendance';
+  static const String historyPath = '/history';
 }
