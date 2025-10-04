@@ -99,22 +99,58 @@ class _DashboardPageState extends State<DashboardPage> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Text('Recent Check-ins', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
                   Expanded(
-                    child: Card(
-                      child: ListView.separated(
-                        itemCount: _attendance.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1),
-                        itemBuilder: (context, i) {
-                          final r = _attendance[i];
-                          final ts = DateFormat('yyyy-MM-dd HH:mm').format(r.timestamp.toLocal());
-                          return ListTile(
-                            leading: const Icon(Icons.qr_code_2),
-                            title: Text(_studentName(r.studentId)),
-                            subtitle: Text('ID ${r.studentId} • $ts'),
-                          );
-                        },
+                    child: DefaultTabController(
+                      length: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const TabBar(
+                            tabs: [
+                              Tab(text: 'Recent'),
+                              Tab(text: 'History'),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Expanded(
+                            child: TabBarView(
+                              children: [
+                                // Recent tab
+                                Card(
+                                  child: ListView.separated(
+                                    itemCount: _attendance.length,
+                                    separatorBuilder: (_, __) => const Divider(height: 1),
+                                    itemBuilder: (context, i) {
+                                      final r = _attendance[i];
+                                      final ts = DateFormat('yyyy-MM-dd HH:mm').format(r.timestamp.toLocal());
+                                      return ListTile(
+                                        leading: const Icon(Icons.qr_code_2),
+                                        title: Text(_studentName(r.studentId)),
+                                        subtitle: Text('ID ${r.studentId} • $ts'),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                // History tab
+                                Card(
+                                  child: ListView.separated(
+                                    itemCount: _history.length,
+                                    separatorBuilder: (_, __) => const Divider(height: 1),
+                                    itemBuilder: (context, i) {
+                                      final r = _history[i];
+                                      final ts = DateFormat('yyyy-MM-dd HH:mm').format(r.timestamp.toLocal());
+                                      return ListTile(
+                                        leading: const Icon(Icons.history),
+                                        title: Text(_studentName(r.studentId)),
+                                        subtitle: Text('ID ${r.studentId} • $ts'),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   )
