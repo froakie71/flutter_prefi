@@ -18,8 +18,6 @@ class _StudentsPageState extends State<StudentsPage> {
   final _gradeLevelCtrl = TextEditingController();
 
   List<Student> _students = [];
-  // Keep locally added students so they show up even if My JSON Server doesn't persist
-  final List<Student> _localAdditions = [];
 
   Student? _selectedForQr;
   bool _loading = false;
@@ -32,16 +30,16 @@ class _StudentsPageState extends State<StudentsPage> {
 
   Future<void> _load() async {
     setState(() => _loading = true);
-    final remote = await ApiService.fetchStudents();
+    final list = await ApiService.fetchStudents();
     if (!mounted) return;
     setState(() {
-      _students = [...remote, ..._localAdditions];
+      _students = list;
       _loading = false;
     });
   }
 
   int _nextId() {
-    final all = [..._students, ..._localAdditions];
+    final all = [..._students];
     if (all.isEmpty) return 1;
     return (all.map((s) => s.id).reduce((a, b) => a > b ? a : b)) + 1;
   }
@@ -66,17 +64,12 @@ class _StudentsPageState extends State<StudentsPage> {
       section: section.isEmpty ? null : section,
       gradeLevel: gradeLevel.isEmpty ? null : gradeLevel,
     );
-    final created = await ApiService.addStudent(s);
-
-    // Regardless of persistence, reflect immediately
-    setState(() {
-      _localAdditions.add(created ?? s);
-      _students = [..._students, created ?? s];
-      _firstCtrl.clear();
-      _lastCtrl.clear();
-      _sectionCtrl.clear();
-      _gradeLevelCtrl.clear();
-    });
+    await ApiService.addStudent(s);
+    await _load();
+    _firstCtrl.clear();
+    _lastCtrl.clear();
+    _sectionCtrl.clear();
+    _gradeLevelCtrl.clear();
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(

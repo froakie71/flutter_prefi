@@ -1,9 +1,14 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../models/student.dart';
 import '../models/attendance.dart';
 import '../services/api_service.dart';
+import '../services/runtime_store.dart';
+import '../utils/file_saver_stub.dart' if (dart.library.html) '../utils/file_saver_web.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:pdf/pdf.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -21,6 +26,13 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
     _reload();
+    RuntimeStore.version.addListener(_reload);
+  }
+
+  @override
+  void dispose() {
+    RuntimeStore.version.removeListener(_reload);
+    super.dispose();
   }
 
   Future<void> _reload() async {
@@ -57,6 +69,23 @@ class _DashboardPageState extends State<DashboardPage> {
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      FilledButton.icon(
+                        onPressed: _exportCsv,
+                        icon: const Icon(Icons.table_view),
+                        label: const Text('Export CSV'),
+                      ),
+                      FilledButton.icon(
+                        onPressed: _exportPdf,
+                        icon: const Icon(Icons.picture_as_pdf),
+                        label: const Text('Export PDF'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
                   Wrap(
                     spacing: 16,
                     runSpacing: 16,
@@ -95,6 +124,70 @@ class _DashboardPageState extends State<DashboardPage> {
         label: const Text('Refresh'),
       ),
     );
+  }
+
+  Future<void> _exportCsv() async {
+    final sb = StringBuffer();
+    sb.writeln('Students');
+    sb.writeln('id,firstName,lastName,section,gradeLevel');
+    for (final s in _students) {
+      sb.writeln('${s.id},"${s.firstName}","${s.lastName}","${s.section ?? ''}","${s.gradeLevel ?? ''}"');
+    }
+    sb.writeln();
+    sb.writeln('Attendance');
+    sb.writeln('id,studentId,studentName,timestamp');
+    for (final r in _attendance) {
+      final name = _studentName(r.studentId);
+      sb.writeln('${r.id},${r.studentId},"$name","${r.timestamp.toIso8601String()}"');
+    }
+    final ok = await FileSaver.saveText('attendance_report.csv', sb.toString(), 'text/csv');
+    if (!mounted) return;
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Saving files is only supported on web in this demo.')),
+      );
+    }
+  }
+
+  Future<void> _exportPdf() async {
+    final doc = pw.Document();
+    final df = DateFormat('yyyy-MM-dd HH:mm');
+    doc.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        build: (ctx) {
+          return [
+            pw.Header(level: 0, child: pw.Text('Attendance Report')), 
+            pw.Paragraph(text: 'Generated: ${DateTime.now().toLocal()}'),
+            pw.SizedBox(height: 12),
+            pw.Text('Summary', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+            pw.Bullet(text: 'Students: ${_students.length}'),
+            pw.Bullet(text: 'Today\'s Check-ins: ${_todayCount}'),
+            pw.Bullet(text: 'Total Attendance: ${_attendance.length}'),
+            pw.SizedBox(height: 12),
+            pw.Text('Recent Check-ins', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+            pw.Table.fromTextArray(
+              headers: const ['ID', 'Student', 'Timestamp'],
+              data: _attendance.take(50).map((r) => [
+                r.studentId.toString(),
+                _studentName(r.studentId),
+                df.format(r.timestamp.toLocal()),
+              ]).toList(),
+              cellStyle: const pw.TextStyle(fontSize: 10),
+              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            ),
+          ];
+        },
+      ),
+    );
+    final bytes = await doc.save();
+    final ok = await FileSaver.saveBytes('attendance_report.pdf', bytes as Uint8List, 'application/pdf');
+    if (!mounted) return;
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Saving files is only supported on web in this demo.')),
+      );
+    }
   }
 }
 
