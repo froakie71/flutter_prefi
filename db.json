@@ -1,7 +1,10 @@
 {
   "students": [
     { "id": 1, "firstName": "Alice", "lastName": "Garcia", "section": "10A", "gradeLevel": "Grade 10" },
-    { "id": 2, "firstName": "Bob", "lastName": "Santos", "section": "10B", "gradeLevel": "Grade 10" }
+    { "id": 2, "firstName": "Bob", "lastName": "Santos", "section": "10B", "gradeLevel": "Grade 10" },
+    { "id": 3, "firstName": "Carla", "lastName": "Dela Cruz", "section": "10C", "gradeLevel": "Grade 10" },
+    { "id": 4, "firstName": "Daniel", "lastName": "Reyes", "section": "11A", "gradeLevel": "Grade 11" },
+    { "id": 5, "firstName": "Ella", "lastName": "Lim", "section": "12B", "gradeLevel": "Grade 12" }
   ],
   "attendance": [
     { "id": 1, "studentId": 1, "timestamp": "2025-10-04T08:00:00.000Z" }

@@ -12,6 +12,25 @@ class ScannerPage extends StatefulWidget {
 
 class _ScannerPageState extends State<ScannerPage> {
   bool _processing = false;
+  bool _studentsLoaded = false;
+  final Set<int> _studentIds = <int>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStudents();
+  }
+
+  Future<void> _loadStudents() async {
+    final list = await ApiService.fetchStudents();
+    if (!mounted) return;
+    setState(() {
+      _studentIds
+        ..clear()
+        ..addAll(list.map((e) => e.id));
+      _studentsLoaded = true;
+    });
+  }
 
   void _onDetect(BarcodeCapture capture) async {
     if (_processing) return;
@@ -32,6 +51,18 @@ class _ScannerPageState extends State<ScannerPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Invalid QR. Expected student ID.')),
+      );
+      return;
+    }
+
+    // Ensure student exists before recording attendance
+    if (!_studentsLoaded) {
+      await _loadStudents();
+    }
+    if (!_studentIds.contains(studentId)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unknown student ID: $studentId')),
       );
       return;
     }
