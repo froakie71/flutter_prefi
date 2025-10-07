@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'pages/scanner_page.dart';
 import 'pages/students_page.dart';
 import 'pages/dashboard_page.dart';
+import 'pages/history_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -22,6 +23,7 @@ class _AppShellState extends State<AppShell> {
     ScannerPage(),
     StudentsPage(),
     DashboardPage(),
+    HistoryPage(),
   ];
 
   @override
@@ -30,6 +32,7 @@ class _AppShellState extends State<AppShell> {
       NavigationDestination(icon: Icon(Icons.qr_code_scanner), label: 'Scanner'),
       NavigationDestination(icon: Icon(Icons.people_alt), label: 'Students'),
       NavigationDestination(icon: Icon(Icons.dashboard), label: 'Dashboard'),
+      NavigationDestination(icon: Icon(Icons.history), label: 'History'),
     ];
 
     return Scaffold(

@@ -14,11 +14,18 @@ class _ScannerPageState extends State<ScannerPage> {
   bool _processing = false;
   bool _studentsLoaded = false;
   final Set<int> _studentIds = <int>{};
+  final MobileScannerController _controller = MobileScannerController();
 
   @override
   void initState() {
     super.initState();
     _loadStudents();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   Future<void> _loadStudents() async {
@@ -89,12 +96,29 @@ class _ScannerPageState extends State<ScannerPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('QR Scanner')),
+      appBar: AppBar(
+        title: const Text('QR Scanner'),
+        actions: [
+          IconButton(
+            tooltip: 'Flash',
+            icon: const Icon(Icons.flash_on),
+            onPressed: () => _controller.toggleTorch(),
+          ),
+          IconButton(
+            tooltip: 'Switch camera (front/back)',
+            icon: const Icon(Icons.cameraswitch),
+            onPressed: () => _controller.switchCamera(),
+          ),
+        ],
+      ),
       body: Stack(
         children: [
-          MobileScanner(
-            fit: BoxFit.contain,
-            onDetect: _onDetect,
+          Positioned.fill(
+            child: MobileScanner(
+              controller: _controller,
+              fit: BoxFit.cover,
+              onDetect: _onDetect,
+            ),
           ),
           if (_processing)
             const Align(

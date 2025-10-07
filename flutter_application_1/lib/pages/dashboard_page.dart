@@ -1,14 +1,19 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart' show MissingPluginException;
 import 'package:intl/intl.dart';
 
 import '../models/student.dart';
 import '../models/attendance.dart';
 import '../services/api_service.dart';
 import '../services/runtime_store.dart';
-import '../utils/file_saver_stub.dart' if (dart.library.html) '../utils/file_saver_web.dart';
+import '../utils/file_saver_stub.dart'
+    if (dart.library.io) '../utils/file_saver_io.dart'
+    if (dart.library.html) '../utils/file_saver_web.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
+import 'package:printing/printing.dart';
+// Using default embedded fonts; for Unicode, we can embed a TTF later if needed.
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -21,7 +26,6 @@ class _DashboardPageState extends State<DashboardPage> {
   bool _loading = false;
   List<Student> _students = [];
   List<AttendanceRecord> _attendance = [];
-  List<AttendanceRecord> _history = [];
 
   @override
   void initState() {
@@ -41,13 +45,11 @@ class _DashboardPageState extends State<DashboardPage> {
     final results = await Future.wait([
       ApiService.fetchStudents(),
       ApiService.fetchAttendance(),
-      ApiService.fetchHistory(),
     ]);
     if (!mounted) return;
     setState(() {
       _students = results[0] as List<Student>;
       _attendance = (results[1] as List<AttendanceRecord>)..sort((a, b) => b.timestamp.compareTo(a.timestamp));
-      _history = (results[2] as List<AttendanceRecord>)..sort((a, b) => b.timestamp.compareTo(a.timestamp));
       _loading = false;
     });
   }
@@ -69,92 +71,82 @@ class _DashboardPageState extends State<DashboardPage> {
         padding: const EdgeInsets.all(16.0),
         child: _loading
             ? const Center(child: CircularProgressIndicator())
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      FilledButton.icon(
-                        onPressed: _exportCsv,
-                        icon: const Icon(Icons.table_view),
-                        label: const Text('Export CSV'),
+            : DefaultTabController(
+                length: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Export buttons centered
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        FilledButton.icon(
+                          onPressed: _exportCsv,
+                          icon: const Icon(Icons.table_view),
+                          label: const Text('Export CSV'),
+                        ),
+                        FilledButton.icon(
+                          onPressed: _exportPdf,
+                          icon: const Icon(Icons.picture_as_pdf),
+                          label: const Text('Export PDF'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    // Centered tab bar with constrained width so it sits perfectly in the middle
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 320),
+                        child: TabBar(
+                          isScrollable: true,
+                          padding: const EdgeInsets.symmetric(horizontal: 40),
+                          // 4px left + 4px right = 8px gap between tabs (matches export buttons spacing)
+                          labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+                          tabs: const [
+                            Tab(text: 'Overview'),
+                            Tab(text: 'Recent'),
+                          ],
+                        ),
                       ),
-                      FilledButton.icon(
-                        onPressed: _exportPdf,
-                        icon: const Icon(Icons.picture_as_pdf),
-                        label: const Text('Export PDF'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 16,
-                    runSpacing: 16,
-                    children: [
-                      _MetricCard(title: 'Students', value: _students.length.toString(), icon: Icons.people_alt),
-                      _MetricCard(title: 'Today\'s Check-ins', value: _todayCount.toString(), icon: Icons.event_available),
-                      _MetricCard(title: 'Total Attendance', value: _attendance.length.toString(), icon: Icons.task_alt),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: DefaultTabController(
-                      length: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    ),
+                    // Tab contents with bounded height
+                    Expanded(
+                      child: TabBarView(
                         children: [
-                          const TabBar(
-                            tabs: [
-                              Tab(text: 'Recent'),
-                              Tab(text: 'History'),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Expanded(
-                            child: TabBarView(
+                          // Overview tab
+                          SingleChildScrollView(
+                            child: Wrap(
+                              alignment: WrapAlignment.center,
+                              spacing: 16,
+                              runSpacing: 16,
                               children: [
-                                // Recent tab
-                                Card(
-                                  child: ListView.separated(
-                                    itemCount: _attendance.length,
-                                    separatorBuilder: (_, __) => const Divider(height: 1),
-                                    itemBuilder: (context, i) {
-                                      final r = _attendance[i];
-                                      final ts = DateFormat('yyyy-MM-dd HH:mm').format(r.timestamp.toLocal());
-                                      return ListTile(
-                                        leading: const Icon(Icons.qr_code_2),
-                                        title: Text(_studentName(r.studentId)),
-                                        subtitle: Text('ID ${r.studentId} • $ts'),
-                                      );
-                                    },
-                                  ),
-                                ),
-                                // History tab
-                                Card(
-                                  child: ListView.separated(
-                                    itemCount: _history.length,
-                                    separatorBuilder: (_, __) => const Divider(height: 1),
-                                    itemBuilder: (context, i) {
-                                      final r = _history[i];
-                                      final ts = DateFormat('yyyy-MM-dd HH:mm').format(r.timestamp.toLocal());
-                                      return ListTile(
-                                        leading: const Icon(Icons.history),
-                                        title: Text(_studentName(r.studentId)),
-                                        subtitle: Text('ID ${r.studentId} • $ts'),
-                                      );
-                                    },
-                                  ),
-                                ),
+                                _MetricCard(title: 'Students', value: _students.length.toString(), icon: Icons.people_alt),
+                                _MetricCard(title: "Today's Check-ins", value: _todayCount.toString(), icon: Icons.event_available),
+                                _MetricCard(title: 'Total Attendance', value: _attendance.length.toString(), icon: Icons.task_alt),
                               ],
                             ),
+                          ),
+                          // Recent tab
+                          ListView.separated(
+                            itemCount: _attendance.length,
+                            separatorBuilder: (_, __) => const Divider(height: 1),
+                            itemBuilder: (context, i) {
+                              final r = _attendance[i];
+                              final ts = DateFormat('yyyy-MM-dd HH:mm').format(r.timestamp.toLocal());
+                              return ListTile(
+                                leading: const Icon(Icons.qr_code_2),
+                                title: Text(_studentName(r.studentId)),
+                                subtitle: Text('ID ${r.studentId} • $ts'),
+                              );
+                            },
                           ),
                         ],
                       ),
                     ),
-                  )
-                ],
+                  ],
+                ),
               ),
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -181,11 +173,9 @@ class _DashboardPageState extends State<DashboardPage> {
     }
     final ok = await FileSaver.saveText('attendance_report.csv', sb.toString(), 'text/csv');
     if (!mounted) return;
-    if (!ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Saving files is only supported on web in this demo.')),
-      );
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(ok ? 'CSV saved (download on web, Documents on mobile).' : 'Saving failed on this platform.')),
+    );
   }
 
   Future<void> _exportPdf() async {
@@ -220,12 +210,34 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
     );
     final bytes = await doc.save();
-    final ok = await FileSaver.saveBytes('attendance_report.pdf', bytes as Uint8List, 'application/pdf');
-    if (!mounted) return;
-    if (!ok) {
+    if (kIsWeb) {
+      final ok = await FileSaver.saveBytes('attendance_report.pdf', bytes, 'application/pdf');
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Saving files is only supported on web in this demo.')),
+        SnackBar(content: Text(ok ? 'PDF downloaded.' : 'Saving failed on this platform.')),
       );
+    } else {
+      // On mobile/desktop, try system share sheet first; if the plugin
+      // isn't registered on this build, fall back to direct save.
+      try {
+        await Printing.sharePdf(bytes: bytes, filename: 'attendance_report.pdf');
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('PDF ready. Choose an app to save/share.')),
+        );
+      } on MissingPluginException {
+        final ok = await FileSaver.saveBytes('attendance_report.pdf', bytes, 'application/pdf');
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ok ? 'PDF saved to app storage.' : 'Saving failed on this platform.')),
+        );
+      } catch (e) {
+        final ok = await FileSaver.saveBytes('attendance_report.pdf', bytes, 'application/pdf');
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ok ? 'PDF saved to app storage.' : 'Saving failed: $e')),
+        );
+      }
     }
   }
 }

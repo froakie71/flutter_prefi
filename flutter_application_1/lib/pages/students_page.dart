@@ -18,14 +18,59 @@ class _StudentsPageState extends State<StudentsPage> {
   final _gradeLevelCtrl = TextEditingController();
 
   List<Student> _students = [];
-
-  Student? _selectedForQr;
   bool _loading = false;
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  void _openAllStudentsSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('All Students', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.6,
+                  child: _students.isEmpty
+                      ? const Center(child: Text('No students found. Tap Refresh on the page.'))
+                      : ListView.separated(
+                          itemCount: _students.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          itemBuilder: (context, i) {
+                            final s = _students[i];
+                            return ListTile(
+                              leading: CircleAvatar(child: Text(s.id.toString())),
+                              title: Text(s.fullName),
+                              subtitle: Text('Section: ${s.section ?? '-'} • Grade: ${s.gradeLevel ?? '-'}'),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.qr_code_2),
+                                onPressed: () => _showQrBottomSheet(s),
+                              ),
+                              onTap: () => _showQrBottomSheet(s),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _load() async {
@@ -77,118 +122,126 @@ class _StudentsPageState extends State<StudentsPage> {
     );
   }
 
+  void _showQrBottomSheet(Student s) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: false,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Center(
+            child: QrImageView(
+              data: 'sid:${s.id}',
+              version: QrVersions.auto,
+              size: 260,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isNarrow = MediaQuery.of(context).size.width < 640;
     return Scaffold(
       appBar: AppBar(title: const Text('Students')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      resizeToAvoidBottomInset: true,
+      body: SingleChildScrollView(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Add Student', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: TextField(
+                const Text('Add Student', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Spacer(),
+                OutlinedButton.icon(
+                  onPressed: _openAllStudentsSheet,
+                  icon: const Icon(Icons.list),
+                  label: const Text('All Students'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (isNarrow)
+              Column(
+                children: [
+                  TextField(
                     controller: _firstCtrl,
                     decoration: const InputDecoration(labelText: 'First name', border: OutlineInputBorder()),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
+                  const SizedBox(height: 8),
+                  TextField(
                     controller: _lastCtrl,
                     decoration: const InputDecoration(labelText: 'Last name', border: OutlineInputBorder()),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
+                  const SizedBox(height: 8),
+                  TextField(
                     controller: _sectionCtrl,
                     decoration: const InputDecoration(labelText: 'Section (optional)', border: OutlineInputBorder()),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
+                  const SizedBox(height: 8),
+                  TextField(
                     controller: _gradeLevelCtrl,
                     decoration: const InputDecoration(labelText: 'Grade level (optional)', border: OutlineInputBorder()),
                   ),
-                ),
-                const SizedBox(width: 12),
-                FilledButton.icon(onPressed: _addStudent, icon: const Icon(Icons.add), label: const Text('Add')),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                FilledButton.tonal(onPressed: _load, child: const Text('Refresh')),
-                const SizedBox(width: 12),
-                if (_selectedForQr != null) Text('  QR for ID: ${_selectedForQr!.id}')
-              ],
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: Card(
-                            child: ListView.separated(
-                              itemCount: _students.length,
-                              separatorBuilder: (_, __) => const Divider(height: 1),
-                              itemBuilder: (context, i) {
-                                final s = _students[i];
-                                return ListTile(
-                                  leading: CircleAvatar(child: Text(s.id.toString())),
-                                  title: Text(s.fullName),
-                                  subtitle: Text('Section: ${s.section ?? '-'} • Grade: ${s.gradeLevel ?? '-'}'),
-                                  trailing: IconButton(
-                                    icon: const Icon(Icons.qr_code_2),
-                                    onPressed: () => setState(() => _selectedForQr = s),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Card(
-                            child: Center(
-                              child: _selectedForQr == null
-                                  ? const Padding(
-                                      padding: EdgeInsets.all(24.0),
-                                      child: Text('Select a student to generate QR'),
-                                    )
-                                  : Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const SizedBox(height: 12),
-                                        Text(_selectedForQr!.fullName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                                        const SizedBox(height: 12),
-                                        // Encode as sid:<id> so scanner can parse reliably
-                                        QrImageView(
-                                          data: 'sid:${_selectedForQr!.id}',
-                                          version: QrVersions.auto,
-                                          size: 220,
-                                        ),
-                                        const SizedBox(height: 12),
-                                        Text('QR encodes: sid:${_selectedForQr!.id}')
-                                      ],
-                                    ),
-                            ),
-                          ),
-                        )
-                      ],
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: FilledButton.icon(onPressed: _addStudent, icon: const Icon(Icons.add), label: const Text('Add')),
+                  ),
+                ],
+              )
+            else
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _firstCtrl,
+                      decoration: const InputDecoration(labelText: 'First name', border: OutlineInputBorder()),
                     ),
-            )
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: _lastCtrl,
+                      decoration: const InputDecoration(labelText: 'Last name', border: OutlineInputBorder()),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: _sectionCtrl,
+                      decoration: const InputDecoration(labelText: 'Section (optional)', border: OutlineInputBorder()),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: _gradeLevelCtrl,
+                      decoration: const InputDecoration(labelText: 'Grade level (optional)', border: OutlineInputBorder()),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  FilledButton.icon(onPressed: _addStudent, icon: const Icon(Icons.add), label: const Text('Add')),
+                ],
+              ),
+            const SizedBox(height: 8),
+            if (_loading) const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12.0),
+              child: LinearProgressIndicator(minHeight: 3),
+            ),
+            // List is now in the "All Students" sheet.
           ],
         ),
       ),
