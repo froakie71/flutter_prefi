@@ -14,6 +14,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 // Using default embedded fonts; for Unicode, we can embed a TTF later if needed.
+import '../widgets/animations.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -62,6 +63,15 @@ class _DashboardPageState extends State<DashboardPage> {
   String _studentName(int id) {
     final s = _students.cast<Student?>().firstWhere((e) => e?.id == id, orElse: () => null);
     return s?.fullName ?? 'ID $id';
+  }
+
+  String _studentMeta(int id) {
+    final s = _students.cast<Student?>().firstWhere((e) => e?.id == id, orElse: () => null);
+    if (s == null) return 'ID $id';
+    final parts = <String>['ID $id'];
+    if ((s.section ?? '').isNotEmpty) parts.add('Section: ${s.section}');
+    if ((s.gradeLevel ?? '').isNotEmpty) parts.add('Grade: ${s.gradeLevel}');
+    return parts.join(' • ');
   }
 
   @override
@@ -122,9 +132,18 @@ class _DashboardPageState extends State<DashboardPage> {
                               spacing: 16,
                               runSpacing: 16,
                               children: [
-                                _MetricCard(title: 'Students', value: _students.length.toString(), icon: Icons.people_alt),
-                                _MetricCard(title: "Today's Check-ins", value: _todayCount.toString(), icon: Icons.event_available),
-                                _MetricCard(title: 'Total Attendance', value: _attendance.length.toString(), icon: Icons.task_alt),
+                                FadeSlide(
+                                  delay: const Duration(milliseconds: 0),
+                                  child: _MetricCard(title: 'Students', value: _students.length.toString(), icon: Icons.people_alt),
+                                ),
+                                FadeSlide(
+                                  delay: const Duration(milliseconds: 60),
+                                  child: _MetricCard(title: "Today's Check-ins", value: _todayCount.toString(), icon: Icons.event_available),
+                                ),
+                                FadeSlide(
+                                  delay: const Duration(milliseconds: 120),
+                                  child: _MetricCard(title: 'Total Attendance', value: _attendance.length.toString(), icon: Icons.task_alt),
+                                ),
                               ],
                             ),
                           ),
@@ -135,10 +154,14 @@ class _DashboardPageState extends State<DashboardPage> {
                             itemBuilder: (context, i) {
                               final r = _attendance[i];
                               final ts = DateFormat('yyyy-MM-dd HH:mm').format(r.timestamp.toLocal());
-                              return ListTile(
-                                leading: const Icon(Icons.qr_code_2),
-                                title: Text(_studentName(r.studentId)),
-                                subtitle: Text('ID ${r.studentId} • $ts'),
+                              final delay = Duration(milliseconds: (i % 24) * 40);
+                              return FadeSlide(
+                                delay: delay,
+                                child: ListTile(
+                                  leading: const Icon(Icons.qr_code_2),
+                                  title: Text(_studentName(r.studentId)),
+                                  subtitle: Text('${_studentMeta(r.studentId)} • $ts'),
+                                ),
                               );
                             },
                           ),
@@ -265,7 +288,7 @@ class _MetricCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(title, style: const TextStyle(fontSize: 14, color: Colors.black54)),
-                  Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                  CountupText(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                 ],
               )
             ],

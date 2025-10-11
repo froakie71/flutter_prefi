@@ -5,6 +5,7 @@ import '../models/student.dart';
 import '../models/attendance.dart';
 import '../services/api_service.dart';
 import '../services/runtime_store.dart';
+import '../widgets/animations.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -51,6 +52,15 @@ class _HistoryPageState extends State<HistoryPage> {
     return s?.fullName ?? 'ID $id';
   }
 
+  String _studentMeta(int id) {
+    final s = _students.cast<Student?>().firstWhere((e) => e?.id == id, orElse: () => null);
+    if (s == null) return 'ID $id';
+    final parts = <String>['ID $id'];
+    if ((s.section ?? '').isNotEmpty) parts.add('Section: ${s.section}');
+    if ((s.gradeLevel ?? '').isNotEmpty) parts.add('Grade: ${s.gradeLevel}');
+    return parts.join(' • ');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -70,10 +80,14 @@ class _HistoryPageState extends State<HistoryPage> {
                         itemBuilder: (context, i) {
                           final r = _history[i];
                           final ts = DateFormat('yyyy-MM-dd HH:mm').format(r.timestamp.toLocal());
-                          return ListTile(
-                            leading: const Icon(Icons.history),
-                            title: Text(_studentName(r.studentId)),
-                            subtitle: Text('ID ${r.studentId} • $ts'),
+                          final delay = Duration(milliseconds: (i % 24) * 40);
+                          return FadeSlide(
+                            delay: delay,
+                            child: ListTile(
+                              leading: const Icon(Icons.history),
+                              title: Text(_studentName(r.studentId)),
+                              subtitle: Text('${_studentMeta(r.studentId)} • $ts'),
+                            ),
                           );
                         },
                       ),

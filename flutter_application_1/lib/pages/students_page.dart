@@ -3,6 +3,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../models/student.dart';
 import '../services/api_service.dart';
+import '../widgets/animations.dart';
 
 class StudentsPage extends StatefulWidget {
   const StudentsPage({super.key});
@@ -52,15 +53,19 @@ class _StudentsPageState extends State<StudentsPage> {
                           separatorBuilder: (_, __) => const Divider(height: 1),
                           itemBuilder: (context, i) {
                             final s = _students[i];
-                            return ListTile(
-                              leading: CircleAvatar(child: Text(s.id.toString())),
-                              title: Text(s.fullName),
-                              subtitle: Text('Section: ${s.section ?? '-'} • Grade: ${s.gradeLevel ?? '-'}'),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.qr_code_2),
-                                onPressed: () => _showQrBottomSheet(s),
+                            final delay = Duration(milliseconds: (i % 24) * 40);
+                            return FadeSlide(
+                              delay: delay,
+                              child: ListTile(
+                                leading: CircleAvatar(child: Text(s.id.toString())),
+                                title: Text(s.fullName),
+                                subtitle: Text('Section: ${s.section ?? '-'} • Grade: ${s.gradeLevel ?? '-'}'),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.qr_code_2),
+                                  onPressed: () => _showQrBottomSheet(s),
+                                ),
+                                onTap: () => _showQrBottomSheet(s),
                               ),
-                              onTap: () => _showQrBottomSheet(s),
                             );
                           },
                         ),
@@ -133,10 +138,12 @@ class _StudentsPageState extends State<StudentsPage> {
         return Padding(
           padding: const EdgeInsets.all(24.0),
           child: Center(
-            child: QrImageView(
-              data: 'sid:${s.id}',
-              version: QrVersions.auto,
-              size: 260,
+            child: FadeSlide(
+              child: QrImageView(
+                data: 'sid:${s.id}',
+                version: QrVersions.auto,
+                size: 260,
+              ),
             ),
           ),
         );

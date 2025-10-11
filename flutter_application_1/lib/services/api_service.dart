@@ -41,6 +41,22 @@ class ApiService {
       ..sort((a, b) => a.id.compareTo(b.id));
   }
 
+  static Future<Student?> fetchStudentById(int id) async {
+    try {
+      final res = await _client.get(_studentsUri('/$id'));
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        final body = jsonDecode(res.body);
+        if (body is Map<String, dynamic>) {
+          final s = Student.fromJson(body);
+          // Ensure availability in runtime for immediate UI usage
+          RuntimeStore.addStudent(s);
+          return s;
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
   static Future<Student?> addStudent(Student student) async {
     // Save to runtime immediately so UI reflects without persistence.
     RuntimeStore.addStudent(student);
